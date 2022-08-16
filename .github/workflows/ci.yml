@@ -2,49 +2,45 @@ name: Run CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-    - uses: actions/checkout@v3
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.4
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.18
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Fetch required Go modules
-      run:  go mod download
-    
-    - name: Build
-      run: go build -v ./...
-      
-    - name: Set up Docker Buildx
-      id:   buildx
-      uses: docker/setup-buildx-action@v1
+      - name: Fetch required Go modules
+        run:  go mod download
 
-    - name: Cache Docker layers
-      uses: actions/cache@v2
-      with: 
-        path: /tmp/.buildx-cache
-        key:  ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-    - name: Build Docker image
-      uses: docker/build-push-action@v2
-      with:
-        builder: ${{ steps.buildx.outputs.name }}
-        push:    false
-        load:    true
-        tags: ${{ github.event.repository.name }}:latest, ${{ github.repository }}:latest
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to:   type=local,dest=/tmp/.buildx-cache
+      - name: Build
+        run:  go build -v ./cmd/api/...
 
-    - name: Test
-      run: go test -v ./...
-      
-    
+      - name: Set up Docker Buildx
+        id:   buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with: 
+          path: /tmp/.buildx-cache
+          key:  ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v2
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          push:    false
+          load:    true
+          tags: ${{ github.event.repository.name }}:latest, ${{ github.repository }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to:   type=local,dest=/tmp/.buildx-cache
