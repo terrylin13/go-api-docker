@@ -34,7 +34,7 @@ func (c *Client) Reader() {
 			log.Println("read err:", err)
 			return
 		}
-		log.Println("recv:", msg)
+		// log.Println("recv:", msg)
 		// TODO: handle msg depend on type
 		c.Send <- *msg
 
@@ -44,16 +44,15 @@ func (c *Client) Reader() {
 func (c *Client) Writer() {
 	defer c.Close()
 	for msg := range c.Send {
-		log.Println("accept:", msg)
+		// log.Println("accept:", msg)
 		sendMsg, _ := json.Marshal(msg)
-		c.Conn.WriteJSON(sendMsg)
+		c.Conn.WriteMessage(websocket.TextMessage, sendMsg)
 	}
 }
 
 func (c *Client) Close() {
 	defer c.Conn.Close()
 	GManager.Unregister <- c
-	close(c.Send)
 }
 
 func (m *Manager) Handle() {
